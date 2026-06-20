@@ -1,9 +1,7 @@
 import { Router } from 'express';
 import bcrypt from 'bcrypt';
-import crypto from 'crypto';
 import pool from '../config/db.js';
 import jwt from 'jsonwebtoken';
-import { sendVerificationEmail } from '../config/mailer.js';
 
 const router = Router();
 
@@ -14,17 +12,13 @@ router.post('/register', async (req, res) => {
     }
     try {
         const hash = await bcrypt.hash(password, 10);
-        const token = crypto.randomUUID();
         await pool.query(
-            'INSERT INTO users (name,email,password,status,verification_token) VALUES ($1,$2,$3,$4,$5)',
-            [name, email, hash, 'unverified', token]
-        );
-        sendVerificationEmail(email, token).catch((e) =>
-            console.log('[mailer] failed:', e.message)
+            'INSERT INTO users (name,email,password,status) VALUES ($1,$2,$3,$4)',
+            [name, email, hash, 'unverified']
         );
 
         res.status(201).json({
-            message: 'Account created. Check your email to verify it.',
+            message: 'Account created.',
         });
     }
     catch (err) {

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getStoredUser } from '../utils/authStorage';
 import { Container } from 'react-bootstrap';
 import { AppNavbar } from '../components/AppNavbar';
 import { UsersToolbar } from '../components/users/UsersToolbar';
@@ -65,18 +66,25 @@ export const PageUsers = () => {
     if (!selectedIds.length) return;
 
     setIsProcessing(true);
+    const currentUser = getStoredUser();
+    const currentId = currentUser ? users.find((el) => el.email === currentUser.email)?.id : undefined;
+    const orderedIds = currentId !== undefined
+      ? [...selectedIds.filter((id) => id !== currentId), ...selectedIds.filter((id) => id === currentId)]
+      : selectedIds;
     try {
-      for (const id of selectedIds) {
+      for (const id of orderedIds) {
         await action(id);
       }
 
       setSelectedIds([]);
-      await loadUsers();
       showToast('success', successMessage);
-    } catch {
-      showToast('danger', 'Operation failed');
+    } catch (error) {
+      if (error instanceof Error && error.message !== 'User is blocked') {
+        showToast('danger', 'Operation failed');
+      }
     } finally {
       setIsProcessing(false);
+      await loadUsers();
     }
   };
 
@@ -94,15 +102,16 @@ export const PageUsers = () => {
   };
 
   const handleAction = (action: ToolbarAction) => {
+    const noun = selectedIds.length === 1 ? 'User' : 'Users';
     switch (action) {
       case 'block':
-        return runAction((id) => updateUserStatus(id, 'blocked'), 'Users blocked');
+        return runAction((id) => updateUserStatus(id, 'blocked'), `${noun} blocked`);
       case 'unblock':
-        return runAction((id) => updateUserStatus(id, 'active'), 'Users unblocked');
+        return runAction((id) => updateUserStatus(id, 'active'), `${noun} unblocked`);
       case 'verify':
-        return runAction((id) => verifyUser(id), 'Users verified');
+        return runAction((id) => verifyUser(id), `${noun} verified`);
       case 'delete':
-        return runAction((id) => deleteUser(id), 'Users deleted');
+        return runAction((id) => deleteUser(id), `${noun} deleted`);
       case 'deleteUnverified':
         return deleteUnverifiedUsers();
     }

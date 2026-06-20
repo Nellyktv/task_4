@@ -14,10 +14,10 @@ export const useUsers = () => {
     try {
       const data = await getUsers();
       setUsers(data);
-    } catch {
+    } catch (error) {
       clearAuth();
       navigate('/login', {
-        state: { info: 'Session expired or access denied' },
+        state: { info: error instanceof Error ? error.message : 'Session expired or access denied' },
       });
     } finally {
       setIsLoading(false);
